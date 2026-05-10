@@ -7,9 +7,7 @@ import os
 import aiosqlite
 import trafilatura
 from typing import List, Dict, Optional, Any
-
-from logger import get_logger
-from config import CONFIG
+from logging_module import get_logger
 
 # Use a separate DB for vectors to prevent locking the main state DB
 VECTOR_DB_FILE = "gemmaforge_vectors.db"
@@ -26,14 +24,15 @@ async def init_vector_db():
         await db.commit()
 
 async def get_cached_vector(text_hash: str) -> Optional[List[float]]:
+    logger = await get_logger()
     try:
         async with aiosqlite.connect(VECTOR_DB_FILE) as db:
             async with db.execute("SELECT vector_json FROM vector_cache WHERE hash_id = ?", (text_hash,)) as cursor:
                 row = await cursor.fetchone()
                 if row:
                     return json.loads(row[0])
-    except Exception:
-        pass
+    except Exception as e:
+        await logger.error(f"Vector DB Read Error: {e}")
     return None
 
 async def save_cached_vector(text_hash: str, vector: List[float]) -> None:

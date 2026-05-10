@@ -1,14 +1,14 @@
 import asyncio
 import urllib.parse
-from typing import Tuple, Dict, Any
+from typing import Tuple
 import aiohttp
 from atproto import AsyncClient, models
 from atproto.exceptions import AtProtocolError
 from mastodon import Mastodon, MastodonNetworkError, MastodonAPIError
 from nostr_sdk import Keys, RelayUrl, EventBuilder, NostrSigner, ClientBuilder
 
-from config import CONFIG, PostData, TransientError, FatalError
-from logger import get_logger
+from configuration_module import CONFIG, PostData, TransientError, FatalError
+from logging_module import get_logger
 
 def build_utm_url(base_url: str, platform: str) -> str:
     params = {"utm_source": platform, "utm_medium": "social", "utm_campaign": "gemmaforge"}
@@ -75,7 +75,7 @@ async def post_to_linkedin(session: aiohttp.ClientSession, post_data: PostData) 
             raise TransientError(f"{PLATFORM} Server Limit: {response.status}")
         raise FatalError(f"{PLATFORM} Bad Request: {response.status} - {await response.text()}")
 
-async def post_to_bluesky(session: aiohttp.ClientSession, post_data: PostData) -> Tuple[str, str]:
+async def post_to_bluesky(_session: aiohttp.ClientSession, post_data: PostData) -> Tuple[str, str]:
     PLATFORM = "bluesky"
     logger = await get_logger()
     if CONFIG.DRY_RUN: return PLATFORM, "success"
@@ -100,7 +100,7 @@ async def post_to_bluesky(session: aiohttp.ClientSession, post_data: PostData) -
             raise TransientError(f"{PLATFORM} Network Issue: {e}")
         raise FatalError(f"{PLATFORM} Fatal Error: {e}")
 
-async def post_to_mastodon(session: aiohttp.ClientSession, post_data: PostData) -> Tuple[str, str]:
+async def post_to_mastodon(_session: aiohttp.ClientSession, post_data: PostData) -> Tuple[str, str]:
     PLATFORM = "mastodon"
     logger = await get_logger()
     if CONFIG.DRY_RUN: return PLATFORM, "success"

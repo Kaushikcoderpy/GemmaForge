@@ -1,9 +1,11 @@
 import os
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Optional
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 
 @dataclass(frozen=True)
 class PostData:
@@ -17,8 +19,17 @@ class PostData:
     dynamic_tags: Optional[List[str]] = None
     syndicated_body: Optional[str] = None
 
+
 @dataclass(frozen=True)
 class PublisherConfig:
+    # Intelligence & Search (Updated to Google AI Studio)
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "") # Added GROQ_API_KEY
+    SERP_API_KEY: str = os.getenv("SERP_API_KEY", "")
+    PSI_API: str = os.getenv("PSI_API", "")
+    BLOGGER_URL: str = os.getenv("BLOGGER_URL", "")
+
+    # Platform Keys
     DEVTO_API_KEY: str = os.getenv("DEVTO_API_KEY", "")
     HASHNODE_TOKEN: str = os.getenv("HASHNODE_TOKEN", "")
     HASHNODE_PUB_ID: str = os.getenv("HASHNODE_PUB_ID", "")
@@ -38,16 +49,19 @@ class PublisherConfig:
     TUMBLR_OAUTH_TOKEN: str = os.getenv("TUMBLR_OAUTH_TOKEN", "")
     TUMBLR_OAUTH_SECRET: str = os.getenv("TUMBLR_OAUTH_SECRET", "")
     TUMBLR_BLOG_NAME: str = os.getenv("TUMBLR_BLOG_NAME", "")
-    
+    BING_API: str = os.getenv("BING_API", "")
+    YANDEX_CODE: str = os.getenv("YANDEX_CODE", "")
+
     DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() == "true"
     TAGS: List[str] = field(default_factory=lambda: ['programming', 'tech'])
 
+
 CONFIG = PublisherConfig()
 
+
 class TransientError(Exception):
-    """Network blips, 429 Rate Limits, 500+ Server Errors. Retry these."""
     pass
 
+
 class FatalError(Exception):
-    """400 Bad Request, 401/403 Auth, 404. Do not retry."""
     pass

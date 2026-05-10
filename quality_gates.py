@@ -4,9 +4,7 @@ from typing import Dict, Any, Optional, Tuple
 from selectolax.lexbor import LexborHTMLParser
 from playwright.async_api import async_playwright
 from axe_playwright_python.async_playwright import Axe
-
-from config import CONFIG
-from logger import get_logger
+from logging_module import get_logger
 
 async def fetch_single_run(session: aiohttp.ClientSession, url: str, api_key: str, run_id: int) -> Optional[Dict[str, float]]:
     logger = await get_logger()
@@ -67,14 +65,27 @@ async def run_accessibility_audit(url: str) -> Dict[str, Any]:
         await logger.error(f"[AXE] Audit Failed: {e}")
         return {"critical_count": 0, "success": False, "error": str(e)}
 
+
 async def check_canonical_liveness(session: aiohttp.ClientSession, url: str) -> Dict[str, Any]:
     logger = await get_logger()
+    # Adding a standard User-Agent is mandatory for Google-hosted targets
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
     await logger.info(f"[LIVENESS] Verifying {url}...")
     try:
-        async with session.head(url, timeout=aiohttp.ClientTimeout(total=15), allow_redirects=True) as resp:
+        # Switch HEAD to GET to avoid 405 Method Not Allowed errors
+        async with session.get(
+                url,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True
+        ) as resp:
             if resp.status == 200:
                 return {"success": True, "status": resp.status}
-            await logger.error(f"[LIVENESS] Failed: HTTP {resp.status}")
+
+            await logger.error(f"[LIVENESS] Failed: HTTP {resp.status} for {url}")
             return {"success": False, "status": resp.status, "error": f"HTTP {resp.status}"}
     except Exception as e:
         await logger.error(f"[LIVENESS] Connection failed: {e}")
