@@ -6,6 +6,11 @@ from typing import List, Dict, Any, Callable, Coroutine, Tuple
 from state_schema import save_state
 from configuration_module import CONFIG, PostData
 from indexer import IndexingEngine
+from platform_integrations import (
+    post_to_devto, post_to_linkedin, post_to_bluesky, post_to_mastodon,
+    post_to_hashnode, post_to_telegram, post_to_discord, post_to_paragraph,
+    post_to_nostr, post_to_tumblr
+)
 
 
 logger = logging.getLogger(__name__)
@@ -35,10 +40,9 @@ async def run_and_persist(session: aiohttp.ClientSession, post_data: PostData, p
 # The user needs to ensure these functions are defined or imported into this file.
 # For example, if `distribute.py` was split, these would come from a `platforms.py` module.
 PLATFORMS: List[Callable[[aiohttp.ClientSession, PostData], Coroutine[Any, Any, Tuple[str, str]]]] = [
-    # Example: post_to_devto, post_to_linkedin, post_to_bluesky, post_to_mastodon,
-    # post_to_telegram, post_to_hashnode, post_to_nostr, post_to_discord,
-    # post_to_paragraph, post_to_tumblr
-    # User must populate this list with actual imported/defined functions.
+    post_to_devto, post_to_linkedin, post_to_bluesky, post_to_mastodon,
+    post_to_hashnode, post_to_telegram, post_to_discord, post_to_paragraph,
+    post_to_nostr, post_to_tumblr
 ]
 
 

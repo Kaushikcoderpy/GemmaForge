@@ -26,9 +26,12 @@ class AsyncLoggerWrapper:
             queue_handler = logging.handlers.QueueHandler(log_queue)
             self.logger.addHandler(queue_handler)
 
-            # File and Console output
-            file_handler = logging.FileHandler(filename)
+            # File and Console output with UTF-8 encoding support
+            file_handler = logging.FileHandler(filename, encoding='utf-8')
             stream_handler = logging.StreamHandler()
+            
+            # Ensure stream handler doesn't crash on Windows consoles with limited character sets
+            stream_handler.setStream(open(1, 'w', encoding='utf-8', closefd=False))
 
             formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
             file_handler.setFormatter(formatter)
@@ -56,5 +59,5 @@ async def get_logger() -> AsyncLoggerWrapper:
     """
     global _logger_instance
     if _logger_instance is None:
-        _logger_instance = AsyncLoggerWrapper("gemmaforge", "dharma.log")
+        _logger_instance = AsyncLoggerWrapper("gemmaforge", "gemmaforge.log")
     return _logger_instance

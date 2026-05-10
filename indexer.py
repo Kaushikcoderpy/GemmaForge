@@ -8,6 +8,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+from configuration_module import CONFIG, PostData
+
 # ==========================================
 # 1. DOMAIN EXCEPTIONS
 # ==========================================
@@ -198,25 +200,25 @@ class IndexingEngine:
             self.logger.error(f"💀 Bing Error: {str(e)}")
             raise FatalError(f"Bing API Error: {e}")
 
-    async def notify_all(self, url: str):
+    async def notify_all(self, session: aiohttp.ClientSession, post_data: PostData):
         """
         Parallel execution of multi-engine indexing.
         Returns a summary tuple for the distribution pipeline.
         """
-        async with aiohttp.ClientSession() as session:
-            # Launch concurrently to protect latency
-            results = await asyncio.gather(
-                self.notify_google(session, url),
-                self.notify_bing(session, url),
-                self.notify_yandex(session, url),
-                return_exceptions=True
-            )
-            
-            engines: List[str] = ["Google", "Bing", "Yandex"]
-            for idx, r in enumerate(results):
-                if isinstance(r, Exception):
-                    self.logger.error(f"💀 {engines[idx]} Indexing Pipeline threw Exception: {type(r).__name__} - {str(r)}")
+        url = post_data.canonical_url
+        # Launch concurrently to protect latency
+        results = await asyncio.gather(
+            self.notify_google(session, url),
+            self.notify_bing(session, url),
+            self.notify_yandex(session, url),
+            return_exceptions=True
+        )
+        
+        engines: List[str] = ["Google", "Bing", "Yandex"]
+        for idx, r in enumerate(results):
+            if isinstance(r, Exception):
+                self.logger.error(f"💀 {engines[idx]} Indexing Pipeline threw Exception: {type(r).__name__} - {str(r)}")
 
-            # Filter and evaluate
-            success: bool = all([not isinstance(r, Exception) and r is True for r in results])
-            return "indexing-engine", "success" if success else "partial-fail"
+        # Filter and evaluate
+        success: bool = all([not isinstance(r, Exception) and r is True for r in results])
+        return "indexing-engine", "success" if success else "partial-fail"

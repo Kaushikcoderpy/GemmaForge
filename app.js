@@ -1,34 +1,51 @@
 // app.js
 document.addEventListener('DOMContentLoaded', () => {
     const forgeBtn = document.getElementById('forge-btn');
+    const modularExecBtn = document.getElementById('modular-exec-btn');
     const rawSeedInput = document.getElementById('raw-seed');
     const humanStyleInput = document.getElementById('human-style');
+    const sandboxCheckbox = document.getElementById('sandbox-mode');
     const consoleDiv = document.getElementById('console');
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
+    const scrollBtn = document.getElementById('scroll-btn');
+    const tabs = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const currentTaskText = document.getElementById('current-task');
 
+    let isAutoScrollEnabled = true;
+
+    // --- UTILS ---
     function getTimestamp() {
         const now = new Date();
         return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
     }
 
-    function appendLog(module, message, type = 'info') {
-        let modClass = '';
-        if (type === 'phase') modClass = 'mod-phase';
-        else if (type === 'platform') modClass = 'mod-platform';
-        else if (type === 'fatal') modClass = 'mod-fatal';
-        else if (type === 'success') modClass = 'mod-success';
-
+    function appendLog(module, message, type = 'info', data = null) {
         const logEntry = document.createElement('div');
         logEntry.className = 'log-line';
+        if (type === 'phase') logEntry.classList.add('active-phase');
+
+        let messageHtml = message;
+        if (data && (data.html || data.markdown)) {
+            const content = data.html || data.markdown;
+            messageHtml += ` <button class="copy-pill" data-content="${encodeURIComponent(content)}">COPY</button>`;
+        }
+
         logEntry.innerHTML = `
-            <span class="log-timestamp">${getTimestamp()}</span>
-            <span class="log-module ${modClass}">[${module.toUpperCase()}]</span>
-            <span class="log-message">${message}</span>
+            <span class="ts">${getTimestamp()}</span>
+            <span class="mod">[${module.toUpperCase()}]</span>
+            <span class="msg">${messageHtml}</span>
         `;
 
+        document.querySelectorAll('.active-phase').forEach(el => el.classList.remove('active-phase'));
         consoleDiv.appendChild(logEntry);
-        consoleDiv.scrollTo({ top: consoleDiv.scrollHeight, behavior: 'smooth' });
+
+        if (isAutoScrollEnabled) {
+            consoleDiv.scrollTo({ top: consoleDiv.scrollHeight, behavior: 'smooth' });
+        } else {
+            scrollBtn.classList.add('visible');
+        }
     }
 
     function setSystemState(state, active) {
@@ -36,34 +53,68 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDot.classList.toggle('active', active);
     }
 
+    // --- TABS ---
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`${target}-tab`).classList.add('active');
+            currentTaskText.innerText = tab.innerText;
+        });
+    });
+
+    // --- COPY FUNCTIONALITY ---
+    consoleDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('copy-pill')) {
+            const content = decodeURIComponent(e.target.dataset.content);
+            navigator.clipboard.writeText(content).then(() => {
+                const originalText = e.target.innerText;
+                e.target.innerText = 'COPIED';
+                setTimeout(() => e.target.innerText = originalText, 2000);
+            });
+        }
+    });
+
+    // --- SCROLLING ---
+    consoleDiv.addEventListener('scroll', () => {
+        const distanceFromBottom = consoleDiv.scrollHeight - consoleDiv.scrollTop - consoleDiv.clientHeight;
+        if (distanceFromBottom > 100) {
+            isAutoScrollEnabled = false;
+            scrollBtn.classList.add('visible');
+        } else {
+            isAutoScrollEnabled = true;
+            scrollBtn.classList.remove('visible');
+        }
+    });
+
+    scrollBtn.addEventListener('click', () => {
+        consoleDiv.scrollTo({ top: consoleDiv.scrollHeight, behavior: 'smooth' });
+    });
+
+    // --- PIPELINE EXECUTION ---
     forgeBtn.addEventListener('click', async () => {
         const raw_seed = rawSeedInput.value.trim();
         const human_style = humanStyleInput.value;
+        const is_draft_mesh = sandboxCheckbox.checked;
 
         if (!raw_seed) {
-            appendLog('VALIDATION', 'Execution halted: Raw seed payload is empty.', 'fatal');
+            appendLog('ERROR', 'Seed input required for execution.', 'fatal');
             return;
         }
 
         forgeBtn.disabled = true;
-        forgeBtn.classList.add('loading');
-        forgeBtn.querySelector('span').innerText = 'Executing Pipeline...';
-        setSystemState('EXECUTING_PIPELINE', true);
+        setSystemState('PROCESSING', true);
         consoleDiv.innerHTML = '';
-
-        appendLog('NETWORK', 'Establishing SSE connection to localhost:8000/api/forge...');
+        appendLog('NETWORK', `Handshaking with ${is_draft_mesh ? 'Aletheia Mode' : 'Full Pipeline'}...`);
 
         try {
             const response = await fetch('http://127.0.0.1:8000/api/forge', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/event-stream'
-                },
-                body: JSON.stringify({ raw_seed, human_style })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ raw_seed, human_style, is_draft_mesh })
             });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
@@ -72,101 +123,85 @@ document.addEventListener('DOMContentLoaded', () => {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n\n');
                 buffer = lines.pop();
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        try {
-                            const parsed = JSON.parse(line.substring(6));
-
-                            if (parsed.event === 'phase_update') {
-                                appendLog('ORCHESTRATOR', parsed.message, 'phase');
-                            } else if (parsed.event === 'platform_update') {
-                                const err = parsed.error ? ` | ERR: ${parsed.error}` : '';
-                                appendLog(`SPOKE_${parsed.platform}`, `Status: ${parsed.status.toUpperCase()}${err}`, parsed.status === 'failed' ? 'fatal' : 'platform');
-                            } else if (parsed.event === 'fatal_error') {
-                                appendLog('EXCEPTION', parsed.message, 'fatal');
-                            } else if (parsed.event === 'system_complete') {
-                                appendLog('SYS_EXIT', parsed.message, 'success');
-                            } else {
-                                appendLog('STDOUT', parsed.message || JSON.stringify(parsed));
-                            }
-                        } catch (e) {
-                            appendLog('SYS_WARN', `Malformed buffer chunk: ${line.substring(0, 50)}...`);
+                        const parsed = JSON.parse(line.substring(6));
+                        if (parsed.event === 'phase_update') {
+                            appendLog('ORCH', parsed.message, 'phase');
+                        } else if (parsed.event === 'fatal_error') {
+                            appendLog('FATAL', parsed.message, 'fatal');
+                        } else if (parsed.event === 'system_complete') {
+                            appendLog('FINAL', parsed.message, 'success', parsed);
+                        } else if (parsed.event === 'broadcast_update') {
+                            appendLog(parsed.platform, parsed.message, parsed.status === 'failed' ? 'fatal' : 'platform');
+                        } else if (parsed.event === 'broadcast_complete') {
+                            appendLog('FINISH', parsed.message, 'success');
                         }
                     }
                 }
             }
         } catch (error) {
-            appendLog('SOCKET_ERR', error.message, 'fatal');
+            appendLog('NET_ERR', error.message, 'fatal');
         } finally {
             forgeBtn.disabled = false;
-            forgeBtn.classList.remove('loading');
-            forgeBtn.querySelector('span').innerText = 'Ignite Engine Pipeline';
-            setSystemState('PROCESS_IDLE', false);
-            appendLog('NETWORK', 'Socket connection closed.');
+            setSystemState('IDLE', false);
+        }
+    });
+
+    // --- MODULAR TOOL EXECUTION (Now SSE for Transparency) ---
+    modularExecBtn.addEventListener('click', async () => {
+        const tool = document.getElementById('modular-tool').value;
+        const input = document.getElementById('modular-input').value.trim();
+
+        if (!input) {
+            appendLog('ERROR', 'Payload input required.', 'fatal');
+            return;
+        }
+
+        modularExecBtn.disabled = true;
+        setSystemState('TOOL_RUN', true);
+        appendLog('MODULAR', `Executing ${tool} atomic function...`);
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/modular/${tool}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ input_data: input })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const parsed = JSON.parse(line.substring(6));
+                        if (parsed.event === 'phase_update') {
+                            appendLog('RETRY', parsed.message, 'warn');
+                        } else if (parsed.event === 'fatal_error') {
+                            appendLog('ERROR', parsed.message, 'fatal');
+                        } else if (parsed.event === 'system_complete') {
+                            appendLog('RESULT', `Operation successful. Output attached.`, 'success', {markdown: parsed.result});
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            appendLog('NET_ERR', error.message, 'fatal');
+        } finally {
+            modularExecBtn.disabled = false;
+            setSystemState('IDLE', false);
         }
     });
 });
-// Add these enhancements to your script.js
-
-function appendLog(module, message, type = 'info') {
-    const logEntry = document.createElement('div');
-    logEntry.className = 'log-line';
-
-    // Add a specialized class for the current action
-    if (type === 'phase') logEntry.classList.add('active-node');
-
-    logEntry.innerHTML = `
-        <span class="log-timestamp">${getTimestamp()}</span>
-        <span class="log-module">[${module.toUpperCase()}]</span>
-        <span class="log-message">${message}</span>
-    `;
-
-    // Remove the "active" highlight from previous logs
-    document.querySelectorAll('.active-node').forEach(el => el.classList.remove('active-node'));
-
-    consoleDiv.appendChild(logEntry);
-
-    // Use a smoother scroll behavior
-    logEntry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// Add these variables at the top of script.js
-const scrollBtn = document.getElementById('scroll-btn');
-let isAutoScrollEnabled = true;
-
-// Detection logic: Is the user looking at history?
-consoleDiv.addEventListener('scroll', () => {
-    const distanceFromBottom = consoleDiv.scrollHeight - consoleDiv.scrollTop - consoleDiv.clientHeight;
-
-    // If user is more than 100px from bottom, disable auto-scroll and show button
-    if (distanceFromBottom > 100) {
-        isAutoScrollEnabled = false;
-        scrollBtn.classList.add('visible');
-    } else {
-        isAutoScrollEnabled = true;
-        scrollBtn.classList.remove('visible', 'pulse');
-    }
-});
-
-// Click to Jump to Bottom
-scrollBtn.addEventListener('click', () => {
-    consoleDiv.scrollTo({ top: consoleDiv.scrollHeight, behavior: 'smooth' });
-});
-
-function appendLog(module, message, type = 'info') {
-    // ... existing entry creation code ...
-
-    consoleDiv.appendChild(logEntry);
-
-    if (isAutoScrollEnabled) {
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    } else {
-        // Pulse the button to signal new data is arriving below
-        scrollBtn.classList.add('pulse');
-    }
-}

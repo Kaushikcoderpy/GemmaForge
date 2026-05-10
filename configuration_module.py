@@ -24,10 +24,15 @@ class PostData:
 class PublisherConfig:
     # Intelligence & Search (Updated to Google AI Studio)
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "") # Added GROQ_API_KEY
     SERP_API_KEY: str = os.getenv("SERP_API_KEY", "")
     PSI_API: str = os.getenv("PSI_API", "")
     BLOGGER_URL: str = os.getenv("BLOGGER_URL", "")
+
+    # Gemma Model Names (Google AI Studio - Verified Gemma 4)
+    GEMMA_2B_MODEL: str = os.getenv("GEMMA_2B_MODEL", "gemma-4-26b-a4b-it")
+    GEMMA_4B_MODEL: str = os.getenv("GEMMA_4B_MODEL", "gemma-4-26b-a4b-it")
+    GEMMA_26B_MODEL: str = os.getenv("GEMMA_26B_MODEL", "gemma-4-26b-a4b-it")
+    GEMMA_31B_MODEL: str = os.getenv("GEMMA_31B_MODEL", "gemma-4-31b-it")
 
     # Platform Keys
     DEVTO_API_KEY: str = os.getenv("DEVTO_API_KEY", "")
