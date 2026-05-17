@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GemmaForge — Mission</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-logo">⚡ GemmaForge</div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active">Mission</a>
+    <a href="tools.html" class="nav-link">Atomic Tools</a>
+    <a href="engine.html" class="nav-link">Engine</a>
+    <a href="demo.html" class="nav-link">Demo</a>
+  </div>
+  <button class="theme-toggle" id="themeToggle">🌙</button>
+</nav>
+
+<style>
+  body {
+    background: linear-gradient(rgba(10, 10, 15, 0.8), rgba(10, 10, 15, 0.85)), url('assets/mission.png') no-repeat center center fixed;
+    background-size: cover;
+  }
+</style>
+
+<main class="page-main">
+  <div class="hero-content">
+    <div class="badge">⚡ Powered by Gemma 2B · 4B · 26B · 31B</div>
+    <h1 class="hero-title">GemmaForge</h1>
+    <p class="hero-subtitle">From raw ideas to distributed content — at machine speed.</p>
+    <p class="hero-desc">We automate the entire technical content lifecycle: competitive intelligence, trend analysis, SEO gap detection, blueprint generation, full-article synthesis, and multi-platform syndication — all driven by purpose-selected Gemma models over the Google GenAI API.</p>
+    <div class="hero-ctas">
+      <a href="tools.html" class="btn-primary">Explore Atomic Tools →</a>
+      <a href="engine.html" class="btn-ghost">Launch Engine →</a>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><span class="stat-num" data-target="11">0</span><span class="stat-label">Platforms</span></div>
+      <div class="stat"><span class="stat-num" data-target="5">0</span><span class="stat-label">AI Pipelines</span></div>
+      <div class="stat"><span class="stat-num" data-target="5">0</span><span class="stat-label">Quality Gates</span></div>
+      <div class="stat"><span class="stat-num" data-target="100">0</span><span class="stat-label">% Async</span></div>
+    </div>
+  </div>
+
+  <!-- Technical Detail Cards -->
+  <section class="mission-section">
+    <div class="section-label">// THE PROBLEM</div>
+    <div class="mission-cards">
+      <div class="mcard">
+        <div class="mcard-icon">🔍</div>
+        <h3>Semantic Gap Blindness</h3>
+        <p>Engineers write technically accurate posts but miss what the top-ranking SERP results actually cover. We use ONNX-embedded cosine similarity to compute your <em>semantic delta</em> against competitors ranked by gap score × inverse rank position.</p>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">⏱️</div>
+        <h3>Distribution Latency</h3>
+        <p>Manually posting to Dev.to, Hashnode, LinkedIn, Bluesky, Mastodon, Telegram, Discord, Nostr, Tumblr, and Paragraph takes hours. GemmaForge fires all 10 concurrently via <code>asyncio.gather()</code> with per-platform idempotent state.</p>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">🛡️</div>
+        <h3>Silent Quality Failures</h3>
+        <p>Posts go live with dead canonical URLs, broken images, low PSI scores, and accessibility violations. Five hard-gate validators run in parallel: Liveness, PageSpeed Insights, Axe-Core, W3C HTML, and Broken Image Scan.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mission-section">
+    <div class="section-label">// THE ARCHITECTURE</div>
+    <div class="arch-pipeline">
+      <div class="pipe-step"><div class="pipe-num">01</div><div class="pipe-label">Compress Fluff</div><div class="pipe-model model-2b">Gemma 2B</div><div class="pipe-desc">Trafilatura + Gemma extracts pure technical signal from competitor HTML</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="pipe-num">02</div><div class="pipe-label">Analyse Trends</div><div class="pipe-model model-4b">Gemma 4B</div><div class="pipe-desc">Google Trends JSON → 5 high-growth engineering signals</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="pipe-num">03</div><div class="pipe-label">SEO Gap Report</div><div class="pipe-model model-26b">Gemma 26B</div><div class="pipe-desc">Cosine similarity + differential analysis → prioritized deficits</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="pipe-num">04</div><div class="pipe-label">Plan Content</div><div class="pipe-model model-26b">Gemma 26B</div><div class="pipe-desc">Gap + trends → structured meta-prompt for writing engine</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="pipe-num">05</div><div class="pipe-label">Write Content</div><div class="pipe-model model-31b">Gemma 31B</div><div class="pipe-desc">Blueprint → production HTML/Markdown, code-first, zero fluff</div></div>
+    </div>
+  </section>
+
+  <section class="mission-section">
+    <div class="section-label">// AI REASONING TRACE (HOW WE DID IT)</div>
+    <div class="mission-cards">
+      <div class="mcard">
+        <div class="mcard-icon">🧠</div>
+        <h3>Model-Specific Routing</h3>
+        <p>We don't use one-size-fits-all models. <strong>Gemma 2B</strong> handles aggressive signal extraction (stripping marketing fluff), while <strong>Gemma 4B</strong> identifies engineering themes from JSON. Complex reasoning like SEO gap analysis is routed to <strong>Gemma 26B/31B</strong>.</p>
+        <div class="trace-hint">TRACE: gemma-2b -> compress_fluff -> signal_density: 0.92</div>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">📐</div>
+        <h3>Semantic Delta Engine</h3>
+        <p>Using <strong>ONNX-embedded Nomic-v1.5</strong>, we vectorize competitor content in real-time. We compute the cosine similarity between your draft and the top 5 SERP results to identify missing technical sub-domains (the 'Semantic Delta').</p>
+        <div class="trace-hint">TRACE: onnx-runtime -> vector_search -> delta_score: 0.24</div>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">⚙️</div>
+        <h3>Handshake Generation</h3>
+        <p>To solve the 'AI Echo' problem, our writing engine uses a <strong>Multi-Turn Handshake Protocol</strong>. The model confirms the persona and constraints in a hidden turn before receiving the blueprint, ensuring zero-filler, code-first output.</p>
+        <div class="trace-hint">TRACE: handshake -> system_instruction -> format: raw_html</div>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">🛡️</div>
+        <h3>Hard-Gate Validators</h3>
+        <p>Five parallel async gates (PSI, Axe-Core, W3C, Liveness, Image Scan) act as a firewall. If accessibility scores fall below 90 or critical HTML errors exist, the syndication pipeline triggers a self-correction loop or pauses for review.</p>
+        <div class="trace-hint">TRACE: axe-core -> violations: 0 -> status: PASS</div>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">🧾</div>
+        <h3>Stateful Persistence</h3>
+        <p>Every step—from raw ingestion to search engine indexing—is recorded in an atomic JSON state. If a platform broadcast fails, the <strong>Tenacity-backed retry logic</strong> resumes from the exact point of failure without re-running expensive AI calls.</p>
+        <div class="trace-hint">TRACE: persistence -> state: BROADCAST_PENDING</div>
+      </div>
+      <div class="mcard">
+        <div class="mcard-icon">📡</div>
+        <h3>SSE Signal Bridge</h3>
+        <p>We eliminated polling. A <strong>Server-Sent Events (SSE)</strong> bridge streams every model thought, validation check, and platform response back to the UI in real-time, providing total observability over the content's journey.</p>
+        <div class="trace-hint">TRACE: sse_stream -> event: log_update -> delay: 12ms</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mission-section">
+    <div class="section-label">// WHAT I'VE LEARNT</div>
+    <div class="mission-cards">
+      <div class="mcard wide">
+        <div class="mcard-icon">🧠</div>
+        <h3>The "Instruction vs. Content" Paradox</h3>
+        <p>A major breakthrough during development was realizing that <strong>LLMs do not distinguish cleanly between "instructions about content" and "content itself"</strong> unless the prompt architecture makes the separation explicit. This manifested as the 'AI Echo' issue, where the 31B model would frequently leak its internal instructions (e.g., "OBJECTIVE: Write a deep-dive") into the final prose.</p>
+        
+        <div style="margin-top: 2rem;">
+          <h4 style="color: var(--yellow); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Failed Fixes (And Why They Failed)</h4>
+          <p style="font-size: 0.85rem; color: var(--text2); margin-bottom: 1rem;">These are the common prompt-engineering tactics we tried first, which proved entirely insufficient for complex, instruction-dense workflows:</p>
+          <ul style="font-size: 0.85rem; opacity: 0.8; margin-left: 1rem; line-height: 1.6; margin-bottom: 2rem;">
+            <li><strong>Lowering Temperature:</strong> Did not stop the echo; it just made the echoed instructions rigidly deterministic and repetitive.</li>
+            <li><strong>Increasing Temperature:</strong> Broke the rigid echo loops, but caused the model to hallucinate technical facts and deviate wildly from the blueprint.</li>
+            <li><strong>Stronger System Prompts:</strong> Yelling <em>"DO NOT WRITE OUTLINES"</em> inside the system prompt failed. Negative constraints are notoriously weak in large LLMs when the context window is flooded with structural examples.</li>
+            <li><strong>Regex Cleaning After Generation:</strong> Brittle and unscalable. Headers like <code>[PART 1]</code> mutate unpredictably, making regex matching a game of whack-a-mole.</li>
+            <li><strong>Chain-of-Thought (CoT) Suppression:</strong> Disabling reasoning made the model write faster, but it lost the ability to synthesize the SEO gap data intelligently.</li>
+          </ul>
+
+          <h4 style="color: var(--green); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">The Actual Fixes (The Gold Standard)</h4>
+          <p style="font-size: 0.85rem; color: var(--text2); margin-bottom: 1rem;">To achieve production-grade stability, we abandoned "prompt tweaking" and moved to <strong>Architectural Isolation</strong>:</p>
+          <ul style="font-size: 0.85rem; opacity: 0.8; margin-left: 1rem; line-height: 1.6;">
+            <li><strong>Reframing Blueprint → Source Data:</strong> We wrapped the planning output in <code>[SOURCE DATA — DO NOT REPRODUCE]</code>. This mentally decoupled "what to do" from "what to know" for the model.</li>
+            <li><strong>Prose-Prefill Anchoring:</strong> By pre-supplying the first sentence of the article (e.g., <code># Title \n\n Deploying EVSE...</code>) into the model's response turn, we physically forced the model into a "continuation" state, bypassing the instruction-echo phase entirely.</li>
+            <li><strong>Sanitizing Poison Headers:</strong> We stripped metadata tags (like <code>ROLE:</code> or <code>META-PROMPT</code>) before feeding the blueprint to the writer to remove structural temptation.</li>
+            <li><strong>Separating Knowledge from Task:</strong> The task instruction ("Write a dense technical prose...") was explicitly moved to the bottom of the prompt, acting as the final binding constraint after the source data.</li>
+            <li><strong>Rescue Generation:</strong> If an echo is mathematically detected in the output stream, the system intercepts it and triggers a high-temperature "Rescue Prompt" using heavily compressed requirements.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mission-section">
+    <div class="section-label">// OUR MISSION</div>
+    <div class="mission-cards">
+      <div class="mcard wide">
+        <div class="mcard-icon">🚀</div>
+        <h3>One-click from idea to audience</h3>
+        <p>We believe an engineer who just shipped something incredible shouldn't spend 3 hours writing and distributing a blog post. GemmaForge turns technical depth into distributed reach — autonomously, reliably, and with full observability over every decision the AI pipeline makes.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">FastAPI</span><span class="tech-tag">aiohttp</span><span class="tech-tag">Tenacity</span>
+          <span class="tech-tag">ONNX Embeddings</span><span class="tech-tag">SSE Streaming</span><span class="tech-tag">Playwright</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GemmaForge — Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+  body {
+    background: linear-gradient(rgba(10, 10, 15, 0.85), rgba(10, 10, 15, 0.85)), url('assets/hero.png') no-repeat center center fixed;
+    background-size: cover;
+  }
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal-content {
+    background: rgba(30, 30, 40, 0.95); padding: 2rem; border-radius: 16px;
+    width: 90%; max-width: 600px; border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+  .modal-content h2 { font-family: 'Outfit', sans-serif; margin-top: 0; color: white; }
+  .modal-content p { color: var(--text3); font-size: 0.9rem; margin-bottom: 1.5rem; }
+  select option { background: #1e1e28; color: white; }
+</style>
+</head>
+<body class="engine-page">
+<nav class="nav">
+  <div class="nav-logo">⚡ GemmaForge</div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Mission</a>
+    <a href="tools.html" class="nav-link">Atomic Tools</a>
+    <a href="engine.html" class="nav-link active">Engine</a>
+    <a href="demo.html" class="nav-link">Demo</a>
+  </div>
+  <button type="button" class="theme-toggle" id="themeToggle">🌙</button>
+</nav>
+
+<main class="page-main engine-main">
+  <div class="page-header">
+    <div class="badge">Full Pipeline · 11 Platforms · 5 Quality Gates</div>
+    <h1>The Distribution Engine</h1>
+    <p class="page-desc">One click from blog post to 11 platforms. Choose your mode, flip your flags, fire.</p>
+  </div>
+
+  <div class="engine-modes">
+    <div class="mode-card active" id="mode-full" onclick="selectMode('full')">
+      <div class="mode-icon">🚀</div>
+      <h3>Full Pipeline Mode</h3>
+      <p>Runs the complete stack: AI asset generation, 5 quality gates (PSI, Axe, W3C, Liveness, Image Scan), concurrent distribution to 11 platforms, and Google/Bing/Yandex indexing.</p>
+      <div class="mode-toggles">
+        <label class="toggle-row"><input type="checkbox" id="flag-qc" checked/><span class="toggle-label">Quality Gates (PSI · Axe · W3C · Liveness · Images)</span></label>
+        <label class="toggle-row"><input type="checkbox" id="flag-se" checked/><span class="toggle-label">Ping Search Engines (Google · Bing · Yandex)</span></label>
+        <label class="toggle-row"><input type="checkbox" id="flag-syn" checked/><span class="toggle-label">Syndicate to 11 Platforms</span></label>
+      </div>
+    </div>
+    <div class="mode-card" id="mode-content" onclick="selectMode('content')">
+      <div class="mode-icon">🧠</div>
+      <h3>Content-Only Mode</h3>
+      <p>Runs all 5 Gemma AI functions (compress, trends, gap, plan, write) but skips every external write — no posts, no indexing, no social APIs called. Safe for testing.</p>
+      <div class="mode-badge">Safe · No External Writes · Full AI Pipeline</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+    <div style="display: flex; gap: 0.8rem; width: 100%; max-width: 800px; justify-content: center;">
+      <input type="text" id="engineTopicInput" class="tool-input" maxlength="2000" oninput="updateCharCount('engineTopicInput', 'topicCharCount', 2000)" placeholder="write a blog on water conservation telling people we need water in the future a lot" style="flex: 1; text-align: center;" />
+      <button type="button" class="btn-secondary" onclick="fillTestInputs()" style="padding: 0 1.2rem; border-radius: 8px; font-weight: 600; white-space: nowrap; border-color: var(--accent);">🧪 TEST INPUTS</button>
+      <button type="button" class="btn-secondary" onclick="openPersonaModal()" style="padding: 0 1.2rem; border-radius: 8px; font-weight: 600; white-space: nowrap;">🎭 PERSONA</button>
+    </div>
+    <div style="font-size: 0.7rem; color: var(--text3); width: 100%; max-width: 800px; text-align: right;">
+      TOPIC CHARS: <span id="topicCharCount">0</span>/2,000
+    </div>
+  </div>
+
+  <div class="engine-fire-row">
+    <button type="button" class="btn-fire" id="fireBtn" onclick="fireEngine()">
+      <span>🔥</span> Fire Engine
+    </button>
+    <div class="engine-status" id="engineStatus">Ready</div>
+  </div>
+
+  <div class="metrics-row" id="metricsRow">
+    <div class="metric-chip" id="m-mode">Mode: <strong>Full</strong></div>
+    <div class="metric-chip" id="m-time">Elapsed: <strong>—</strong></div>
+    <div class="metric-chip success-flash" id="m-success" style="display:none">🎉 SUCCESS!</div>
+  </div>
+
+  <div class="engine-dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Column 1: Terminal -->
+    <div class="log-terminal" style="margin: 0; height: 100%;">
+      <div class="terminal-header">
+        <span class="terminal-title">📡 Live Log Stream</span>
+        <span class="terminal-dot dot-green" id="sseIndicator" title="SSE Connected"></span>
+        <span class="log-count" id="logCount">0 lines</span>
+        <button type="button" class="terminal-clear" onclick="clearLogs()">Clear</button>
+      </div>
+      <div class="log-body" id="logBody" style="height: 500px;">
+        <span class="log-line log-info">⏳ Waiting for engine to start...</span>
+      </div>
+    </div>
+
+    <!-- Column 2: Content Forge Preview -->
+    <div id="forgedContentSection" class="forged-container glass" style="margin: 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="forged-header" style="background: rgba(0,0,0,0.3); padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <span style="font-weight: 600; color: var(--accent); letter-spacing: 1px;">✨ FORGED CONTENT</span>
+        <button onclick="copyForgedContent()" class="btn-secondary mini">Copy Markdown</button>
+      </div>
+      <div id="forgedDisplay" class="forged-display" style="padding: 1.5rem; flex-grow: 1; overflow-y: auto; font-family: 'Inter', sans-serif; line-height: 1.6; color: #e0e0e0; background: rgba(0,0,0,0.2); height: 400px;">
+        <div style="color: #666; font-style: italic; text-align: center; margin-top: 100px;">No content forged yet. Fire the engine to begin...</div>
+      </div>
+      <div id="editControls" style="padding: 1.2rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 0.8rem; opacity: 0.5; pointer-events: none;">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span style="font-size: 0.75rem; color: var(--text3); font-weight: 600; text-transform: uppercase; white-space: nowrap;">Model:</span>
+          <select id="editModelSelect" class="tool-input" style="flex: 1; padding: 0.6rem; border-radius: 8px; font-size: 0.85rem; background: rgba(255,255,255,0.05);">
+            <option value="gemma-4-31b-it">Gemma 31B (Best Quality)</option>
+            <option value="gemma-4-26b-a4b-it">Gemma 26B (Balanced)</option>
+            <option value="gemma-2-4b-it">Gemma 4B (Fast)</option>
+          </select>
+        </div>
+        <textarea id="editInstructionInput" class="tool-input" maxlength="1000" oninput="updateCharCount('editInstructionInput', 'editCharCount', 1000)" placeholder="ASK FOR AN EDIT (e.g. 'Rewrite the introduction to focus on performance metrics')" style="width: 100%; padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; background: rgba(255,255,255,0.05); min-height: 80px; resize: none;"></textarea>
+        <div style="font-size: 0.7rem; color: var(--text3); text-align: right; margin-top: -0.5rem; margin-bottom: 0.2rem;">
+          CHARS: <span id="editCharCount">0</span>/1,000
+        </div>
+        <button id="submitEditBtn" onclick="requestEdit()" class="btn-secondary" style="width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: 600; background: var(--accent); color: white; border: none; cursor: pointer;">APPLY EDIT ▶</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- Persona Modal -->
+<div id="personaModal" class="modal-overlay">
+  <div class="modal-content">
+    <h2>Define AI Persona</h2>
+    <p>Set the tone and expertise for the engine (e.g. "Write as a technical environmental scientist focusing on stochastic hydrological models").</p>
+    <textarea id="personaInput" class="tool-input" maxlength="4000" oninput="updateCharCount('personaInput', 'personaCharCount', 4000)" placeholder="Paste your custom persona here..." style="width: 100%; height: 250px; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; resize: none; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;"></textarea>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 0.75rem; color: var(--text3);">CHARS: <span id="personaCharCount">0</span>/4,000</span>
+      <div style="display: flex; gap: 0.8rem;">
+        <button class="btn-secondary" onclick="closePersonaModal()">CANCEL</button>
+        <button class="btn-primary" onclick="savePersona()" style="background: var(--accent); color: white;">SAVE PERSONA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="app.js?v=5"></script>
+</body>
+</html>

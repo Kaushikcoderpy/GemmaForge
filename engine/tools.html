@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GemmaForge — Atomic Tools</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<!-- Marked.js for markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-logo">⚡ GemmaForge</div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Mission</a>
+    <a href="tools.html" class="nav-link active">Atomic Tools</a>
+    <a href="engine.html" class="nav-link">Engine</a>
+    <a href="demo.html" class="nav-link">Demo</a>
+  <button class="theme-toggle" id="settingsToggle" onclick="openSettings()" style="margin-right: 10px;" title="API Settings">⚙️</button>
+  <button class="theme-toggle" id="themeToggle">🌙</button>
+</nav>
+
+<style>
+  body {
+    background: linear-gradient(rgba(10, 10, 15, 0.8), rgba(10, 10, 15, 0.85)), url('assets/tools.png') no-repeat center center fixed;
+    background-size: cover;
+  }
+</style>
+
+<main class="page-main tools-main">
+  <div class="page-header">
+    <div class="badge">5 Atomic Functions · 4 Gemma Models</div>
+    <h1>Atomic Intelligence Tools</h1>
+    <p class="page-desc">Five specialized Gemma functions — each solving one phase of the content pipeline.</p>
+    <button type="button" class="btn-secondary" onclick="fillTestInputs()" style="margin-top: 1rem; border-color: var(--accent);">🧪 Try with Test Inputs</button>
+  </div>
+
+  <div class="tools-grid">
+
+    <!-- Tool 1 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-2b">Gemma 2B — Signal Extraction</div>
+        <div class="tool-icon">🗜️</div>
+      </div>
+      <h3>Compress Competitor Fluff</h3>
+      <p>Strips all marketing noise, introductory filler, and self-promotion. Retains only hard technical data: version numbers, library names, code logic, and architectural constraints.</p>
+      <div class="tool-fn">compress_competitor_fluff_2b(raw_text)</div>
+      <textarea class="tool-input" placeholder="Paste competitor article text here..." id="input-compress" rows="5" maxlength="20000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-compress">0</span>/20,000</div>
+      <button type="button" class="tool-btn" id="btn-compress" onclick="callTool('compress-fluff')">Run ▶</button>
+    </div>
+
+    <!-- Tool 2 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-4b">Gemma 4B — Pattern Recognition</div>
+        <div class="tool-icon">📈</div>
+      </div>
+      <h3>Analyse Trends</h3>
+      <p>Reads raw Google Trends JSON and extracts exactly 5 high-growth engineering signals — libraries, frameworks, architecture patterns. Filters out consumer noise.</p>
+      <div class="tool-fn">analyse_trends_4b(raw_trends_json)</div>
+      <textarea class="tool-input" placeholder="Paste Google Trends JSON here..." id="input-trends" rows="5" maxlength="15000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-trends">0</span>/15,000</div>
+      <button type="button" class="tool-btn" id="btn-trends" onclick="callTool('analyse-trends')">Run ▶</button>
+    </div>
+
+    <!-- Tool 3 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-26b">Gemma 26B — Differential Analysis</div>
+        <div class="tool-icon">🔬</div>
+      </div>
+      <h3>SEO Gap Report</h3>
+      <p>Computes the Semantic Delta between your content and competitor posts. Returns a prioritized list of technical sub-domains and implementation details you're missing.</p>
+      <div class="tool-fn">generate_seo_gap_report_26b(my_text, competitor_context)</div>
+      <textarea class="tool-input" placeholder="Your article text..." id="input-seo-my" rows="3" maxlength="20000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-seo-my">0</span>/20,000</div>
+      <textarea class="tool-input" placeholder="Competitor context (scraped text)..." id="input-seo-comp" rows="3" maxlength="20000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-seo-comp">0</span>/20,000</div>
+      <button type="button" class="tool-btn" id="btn-seo" onclick="callTool('seo-gap-report')">Run ▶</button>
+    </div>
+
+    <!-- Tool 4 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-26b">Gemma 26B — Blueprint Synthesis</div>
+        <div class="tool-icon">🗺️</div>
+      </div>
+      <h3>Plan Content</h3>
+      <p>Acts as a Lead Content Architect. Synthesizes the gap report and trend signals into a structured meta-prompt — a sequence of discrete, actionable instructions for the writing engine.</p>
+      <div class="tool-fn">plan_the_content_26b(gap_report, trends_summary, human_style)</div>
+      <textarea class="tool-input" placeholder="Gap report from tool 3..." id="input-plan-gap" rows="3" maxlength="15000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-plan-gap">0</span>/15,000</div>
+      <textarea class="tool-input" placeholder="Trends summary from tool 2..." id="input-plan-trends" rows="2" maxlength="5000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-plan-trends">0</span>/5,000</div>
+      <textarea class="tool-input" placeholder="Style constraint (e.g. 'technical, no fluff, code-heavy')..." id="input-plan-style" rows="2" maxlength="1000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-plan-style">0</span>/1,000</div>
+      <button type="button" class="tool-btn" id="btn-plan" onclick="callTool('plan-content')">Run ▶</button>
+    </div>
+
+    <!-- Tool 5 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-31b">Gemma 31B — Content Generation</div>
+        <div class="tool-icon">✍️</div>
+      </div>
+      <h3>Write Content</h3>
+      <p>Executes the architectural blueprint into a production-ready article. Prioritizes code snippets, architecture diagrams, and engineering rigor. Zero corporate filler.</p>
+      <div class="tool-fn">write_the_content_31b(content_plan, output_format)</div>
+      <textarea class="tool-input" placeholder="Content blueprint / meta-prompt from tool 4..." id="input-write" rows="5" maxlength="20000"></textarea>
+      <div class="char-limit-row"><span class="char-label">CHARS:</span> <span id="count-write">0</span>/20,000</div>
+      <div class="format-row">
+        <label class="format-label">Output format:</label>
+        <div class="format-toggle">
+          <button type="button" class="fmt-btn active" id="fmt-html" onclick="setFormat('html')">HTML</button>
+          <button type="button" class="fmt-btn" id="fmt-md" onclick="setFormat('markdown')">Markdown</button>
+        </div>
+        <span class="format-selected" id="format-display">html</span>
+      </div>
+      <button type="button" class="tool-btn" id="btn-write" onclick="callTool('write-content')">Run ▶</button>
+    </div>
+
+  </div>
+</main>
+
+<!-- Result Previewer Modal -->
+<div class="preview-overlay" id="previewOverlay" onclick="closePreview(event)">
+  <div class="preview-modal">
+    <div class="preview-header">
+      <div class="preview-title" id="previewTitle">Result</div>
+      <div class="preview-tabs">
+        <button type="button" class="prev-tab active" id="tab-rendered" onclick="switchTab('rendered')">Rendered</button>
+        <button type="button" class="prev-tab" id="tab-raw" onclick="switchTab('raw')">Raw</button>
+      </div>
+      <button type="button" class="preview-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-pane" id="pane-rendered"></div>
+      <pre class="preview-pane raw-pane hidden" id="pane-raw"></pre>
+    </div>
+    <div class="preview-footer">
+      <button type="button" class="copy-btn" onclick="copyResult()">📋 Copy</button>
+      <span class="preview-chars" id="previewChars"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Atomic Tool History -->
+<button type="button" class="history-fab" id="historyButton" onclick="openHistory()" title="Open generated output history">
+  <span class="history-fab-icon">🗒️</span>
+  <span class="history-count" id="historyCount">0</span>
+</button>
+
+<div class="history-overlay" id="historyOverlay" onclick="closeHistory(event)">
+  <div class="history-modal" onclick="event.stopPropagation()">
+    <div class="history-header">
+      <div>
+        <div class="history-kicker">Atomic Tool History</div>
+        <h2>Generated Outputs</h2>
+      </div>
+      <div style="display:flex; gap: 0.5rem;">
+        <button type="button" class="copy-btn danger" onclick="clearHistory()">Clear</button>
+        <button type="button" class="preview-close" onclick="closeHistory()">✕</button>
+      </div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="history-overlay" id="settingsOverlay" onclick="closeSettings(event)" style="z-index: 2000;">
+  <div class="history-modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+    <div class="history-header">
+      <div>
+        <div class="history-kicker">BYOK Configuration</div>
+        <h2>API Settings</h2>
+      </div>
+      <button type="button" class="preview-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div style="padding: 1rem 0;">
+      <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">GemmaForge now runs entirely locally in your browser for maximum speed and privacy. Enter your Gemini API key below. It will be stored securely in your browser's local storage.</p>
+      <label class="format-label" style="display: block; margin-bottom: 0.5rem;">Google Gemini API Key:</label>
+      <input type="password" id="geminiApiKey" class="tool-input" placeholder="AIzaSy..." style="min-height: 40px; margin-bottom: 1rem; width: 100%;">
+      <div style="display: flex; gap: 0.5rem; width: 100%;">
+        <button type="button" class="tool-btn" onclick="saveSettings()" style="flex: 1;">Save Key</button>
+        <button type="button" class="tool-btn danger" onclick="clearSettings()" style="background-color: #ef4444;">Clear Key</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="ai_engine.js"></script>
+<script src="app.js?v=5"></script>
+</body>
+</html>
