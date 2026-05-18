@@ -123,6 +123,61 @@ window.aiEngine = (function() {
         }
     }
 
+    async function callGeminiVision(modelName, prompt, base64Data, mimeType, generationConfig, systemInstruction = null, timeoutMs = 90000) {
+        const apiKey = getApiKey();
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        const payload = {
+            contents: [
+                {
+                    role: "user",
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }
+            ],
+            generationConfig: generationConfig
+        };
+
+        if (systemInstruction) {
+            payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+
+            clearTimeout(timer);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errText}`);
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        } catch (err) {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') {
+                throw new Error(`TIMEOUT: ${modelName} Vision took longer than ${timeoutMs/1000}s.`);
+            }
+            throw err;
+        }
+    }
+
     // Fallback helper
     const logFallback = (msg) => {
         if (window.showToast) window.showToast(msg, 'warning');
@@ -219,6 +274,30 @@ Rules:
                     logFallback(`${tier} failed (timeout or echo). Falling back to ${tiers[tiers.indexOf(tier)+1]}...`);
                 }
             }
+        },
+
+        generateAltText: async function(base64Data, mimeType) {
+            const model = await getTargetModel('26b');
+            const prompt = "TASK: Generate concise, descriptive alt text for this image. Output ONLY the alt text, without any introductory words like 'Here is the alt text:'.";
+            const sysInstruction = "You are an automated SEO utility. Your ONLY task is to return the direct, final polished alt text string. You are strictly forbidden from outputting drafts, working steps, intermediate details, thought logs, explanations, or introductory text. Output ONLY the final sentence immediately.";
+            return await callGeminiVision(model, prompt, base64Data, mimeType, { temperature: 0.4, maxOutputTokens: 512 }, sysInstruction);
+        },
+
+        extractImageContent: async function(base64Data, mimeType, extraPrompt = "") {
+            const model = await getTargetModel('26b');
+            let prompt = "TASK: Extract all relevant textual information, structural plans, or diagrams from this image.";
+            if (extraPrompt) {
+                prompt += `\nADDITIONAL INSTRUCTIONS: ${extraPrompt}`;
+            }
+            prompt += "\nOUTPUT: Provide a clear, detailed markdown summary of the image's content. Do not include introductory conversational filler.";
+            return await callGeminiVision(model, prompt, base64Data, mimeType, { temperature: 0.4, maxOutputTokens: 4096 });
+        },
+
+        imageToArticle: async function(base64Data, mimeType, extraPrompt = "", outputFormat = "html") {
+            const extracted = await this.extractImageContent(base64Data, mimeType, extraPrompt);
+            const plan = await this.planTheContent("N/A - Image based generation", extracted, "technical, code-heavy, no fluff");
+            const article = await this.writeTheContent(plan, outputFormat);
+            return `### EXTRACTED CONTENT FROM IMAGE\n${extracted}\n\n### GENERATED BLUEPRINT\n${plan}\n\n### FINAL ARTICLE\n${article}`;
         }
     };
 })();

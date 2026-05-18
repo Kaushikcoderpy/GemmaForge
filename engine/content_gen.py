@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import os
 import re
@@ -181,13 +180,12 @@ async def compress_competitor_fluff_2b(raw_text: str) -> str:
     It excels at filtering and summarization tasks where high-level reasoning isn't as critical as speed.
     """
     api_key = _get_api_key()
-    prompt = f"""Perform aggressive signal extraction on the provided text.
-    Discard all marketing copy, introductions, self-promotional filler, and 'thought' transitions.
-    Retain only hard technical data: version numbers, library names, code logic, and architectural constraints.
-    
-    INPUT TEXT:
-    {raw_text[:12000]}
-    
+    prompt = f"""TASK: Extract raw technical parameters, version numbers, and architecture logic from input.
+
+    FORMAT ENFORCEMENT: Output ONLY a strict Markdown bulleted list (-).
+    ZERO introductory text. ZERO conversational filler.
+    INPUT:
+    {raw_text}
     OUTPUT: A high-density technical summary."""
 
     resolver = aiohttp.ThreadedResolver()
@@ -212,14 +210,11 @@ async def analyse_trends_4b(raw_trends_json: str) -> str:
     It can efficiently identify themes and emerging signals without the overhead of larger models.
     """
     api_key = _get_api_key()
-    prompt = f"""Review the following Google Trends raw JSON data.
-    Identify exactly 5 emerging technical signals or engineering themes that demonstrate high growth.
-    Filter for specific libraries, frameworks, or architecture patterns. Discard general consumer topics.
-    
-    RAW DATA:
-    {raw_trends_json}
-    
-    OUTPUT: A technical briefing for a lead architect."""
+    prompt = f"""TASK: Extract 5 technical growth signals from the JSON data.
+FORMAT ENFORCEMENT: Return exactly 5 Markdown headers (##). Under each header, provide a bulleted list (-) of extracted entities and growth metrics.
+ZERO conversational text. ZERO intro/outro.
+INPUT:
+{raw_trends_json}"""
 
     resolver = aiohttp.ThreadedResolver()
     connector = aiohttp.TCPConnector(resolver=resolver)
@@ -243,14 +238,15 @@ async def generate_seo_gap_report_26b(my_text: str, competitor_context: str) -> 
     The 26B model is equipped with the necessary parameter count to perform differential analysis effectively.
     """
     api_key = _get_api_key()
-    prompt = f"""Execute a differential technical analysis between my content and the provided competitor context.
-    Identify the 'Semantic Delta': specific technical sub-domains, edge-case scenarios, or implementation details present in their work but missing from mine.
-    
-    MY TEXT: 
-    {my_text[:8000]}
+    prompt = f"""TASK: Perform differential technical extraction. Identify concepts present in COMPETITOR missing from MY_TEXT.
+
+FORMAT ENFORCEMENT: Strict Markdown unordered list (-) only. State the missing technical entity and a 1-sentence context.
+ZERO introductory text. NO persona
     
     COMPETITOR CONTEXT: 
     {competitor_context}
+    MY CONTEXT :
+    {my_text}
     
     OUTPUT: A prioritized list of technical deficits and recommended inclusions."""
 
@@ -276,14 +272,15 @@ async def plan_the_content_26b(gap_report: str, trends_summary: str, human_style
     synthesis of multiple inputs. The 26B model is ideal for generating coherent, logical meta-prompts.
     """
     api_key = _get_api_key()
-    prompt = f"""As a Lead Content Architect, construct a high-fidelity technical blueprint for a deep-dive engineering article.
-    Synthesize the provided gap analysis and trends into a structured 'Meta-Prompt' for a writing engine.
-    
-    GAP REPORT: {gap_report}
-    TRENDS SUMMARY: {trends_summary}
-    CONSTRAINTS (STYLE): {human_style}
-    
-    OUTPUT: A sequence of discrete, actionable instructions for a content generator. Focus on technical depth and code-priority."""
+    prompt = f"""TASK: Generate a structural outline (plan to write content) synthesizing gap data and trends.
+FORMAT ENFORCEMENT: Output ONLY valid Markdown headers (##) and bullet points (-).
+DO NOT output meta-text, titles, or conversational filler. Start output immediately with the first ## header.
+GAP REPORT : {gap_report}
+TRENDS : {trends_summary}
+style : {human_style}
+
+"""
+
 
     resolver = aiohttp.ThreadedResolver()
     connector = aiohttp.TCPConnector(resolver=resolver)
@@ -312,21 +309,25 @@ async def write_the_content_31b(content_plan: str, output_format: str = "html", 
     contract = _build_article_contract(content_plan, output_format)
     
     base_rules = (
-        "Rules: 1. Start with a visceral, narrative hook. 2. Weave relevant data into the story. "
-        "3. Use active, conversational verbs. 4. No 'Introduction' or 'Hardware' headers. "
-        "5. Output ONLY final, production-ready prose. No plans. No conversational filler. No echoes."
+        "Rules: 1. Start with a  narrative hook. "
+        "2. Weave relevant data into the story. "
+        "3. Use active, conversational verbs. "
+        "4. No Introduction"
+        "5. Output ONLY final No plans. No conversational filler. No echoes."
     )
     if persona:
         system_instruction = f"Persona: {persona}\n\n{base_rules}"
     else:
-        system_instruction = f"Persona: You are a Senior Technical Writer with a visceral, human-centric style.\n\n{base_rules}"
+        system_instruction = base_rules
 
-    final_prompt = f"""Write a final, production-ready technical article based on this data.
-[DATA SOURCE]:
-{contract}
+    final_prompt = f"""SYSTEM: You are a raw text compilation engine. You have no identity, persona, or emotion. You output strictly compliant {output_format} markup.
+USER: TASK: Compile input data into {output_format}.
+FORMAT ENFORCEMENT:
+Output ONLY valid, raw {output_format}.
+DO NOT wrap output in markdown code blocks (e.g., no html or markdown).
+ZERO conversational filler. Start immediately with the first structural tag/header.
 
-[STRICT COMMAND]: Transform the data above into a high-engagement, human-centric article.
-[STRICT RULE]: Start the article immediately. Do NOT echo the prompt. Do NOT explain your plan."""
+CONTENT PLAN : {content_plan}"""
 
     resolver = aiohttp.ThreadedResolver()
     connector = aiohttp.TCPConnector(resolver=resolver)
@@ -404,3 +405,69 @@ async def write_the_content_31b(content_plan: str, output_format: str = "html", 
                     result = _strip_generation_wrappers(result, output_format)
 
         return result
+
+@retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), retry=retry_if_exception_type((aiohttp.ClientError, APIError, asyncio.TimeoutError)))
+async def generate_alt_text_26b(image_base64: str, mime_type: str = "image/jpeg") -> str:
+    """
+    Task: Generate descriptive alt text for an image using Gemma Vision.
+    """
+    api_key = _get_api_key()
+    prompt = "TASK: Generate concise, descriptive alt text for this image. Output ONLY the alt text, without any introductory words like 'Here is the alt text:'."
+    
+    resolver = aiohttp.ThreadedResolver()
+    connector = aiohttp.TCPConnector(resolver=resolver)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        target_model = await _get_target_model(session, "gemma-4-26b-a4b-it", ["26b", "27b", "31b"])
+        generate_url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {"inlineData": {"mimeType": mime_type, "data": image_base64}}
+                ]
+            }],
+            "systemInstruction": {
+                "parts": [
+                    {"text": "You are an automated SEO utility. Your ONLY output is the direct, final alt text string. You never write lists of steps, draft versions, thought logs, explanations, or introductory text. Output only the polished final sentence immediately."}
+                ]
+            }
+        }
+        
+        async with session.post(generate_url, json=payload, timeout=aiohttp.ClientTimeout(total=240)) as gen_resp:
+            if gen_resp.status != 200:
+                text = await gen_resp.text()
+                raise APIError(f"Generation failed: {text}")
+            data = await gen_resp.json()
+            return data['candidates'][0]['content']['parts'][0]['text']
+
+@retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), retry=retry_if_exception_type((aiohttp.ClientError, APIError, asyncio.TimeoutError)))
+async def extract_image_content_26b(image_base64: str, mime_type: str = "image/jpeg", prompt: str = "") -> str:
+    """
+    Task: Extract content, text, or a structural plan from an image.
+    """
+    api_key = _get_api_key()
+    base_prompt = "TASK: Extract all relevant textual information, structural plans, or diagrams from this image."
+    if prompt:
+        base_prompt = f"{base_prompt}\\nADDITIONAL INSTRUCTIONS: {prompt}\\n"
+    base_prompt += "\\nOUTPUT: Provide a clear, detailed markdown summary of the image's content. Do not include introductory conversational filler."
+    
+    resolver = aiohttp.ThreadedResolver()
+    connector = aiohttp.TCPConnector(resolver=resolver)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        target_model = await _get_target_model(session, "gemma-4-26b-a4b-it", ["26b", "27b", "31b"])
+        generate_url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": base_prompt},
+                    {"inlineData": {"mimeType": mime_type, "data": image_base64}}
+                ]
+            }]
+        }
+        
+        async with session.post(generate_url, json=payload, timeout=aiohttp.ClientTimeout(total=240)) as gen_resp:
+            if gen_resp.status != 200:
+                text = await gen_resp.text()
+                raise APIError(f"Generation failed: {text}")
+            data = await gen_resp.json()
+            return data['candidates'][0]['content']['parts'][0]['text']

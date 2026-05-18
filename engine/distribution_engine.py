@@ -126,7 +126,6 @@ import hashlib
 import json
 import os
 import urllib.parse
-import time
 import queue
 import logging
 from logging.handlers import QueueHandler, QueueListener
@@ -137,7 +136,7 @@ from selectolax.lexbor import LexborHTMLParser
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential, retry_if_exception_type, retry
 from aiohttp import DummyCookieJar
 from typing import Any
-from atproto import AsyncClient, models
+from atproto import AsyncClient
 from atproto.exceptions import AtProtocolError
 from mastodon import Mastodon, MastodonNetworkError, MastodonAPIError
 from playwright.async_api import async_playwright
@@ -348,7 +347,7 @@ def compute_content_hash(post_data: PostData) -> str:
     return hasher.hexdigest()
 
 
-def fallback_teaser(html_content: str, ai_hook: str, title: str, canonical_url: str) -> str:
+def fallback_teaser(html_content: str, ai_hook: str) -> str:
     """Ultimate Fallback: Hook + One Code Block + Link."""
     parser: LexborHTMLParser = LexborHTMLParser(html_content)
     code_block_md: str = ""
@@ -552,7 +551,7 @@ async def _generate_search_query(session: aiohttp.ClientSession, title: str) -> 
 
 async def _fetch_organic_serp(session: aiohttp.ClientSession, query: str) -> List[str]:
     logger.info(f"🔍 [SERP] Fetching top 5 organic results for '{query}'...")
-    api_key = os.getenv("SERPAPI_KEY", "55de5967d30c4ef126fbfee2327ba66c2e743e1c9d3a85992b9f1b00e90c250c")
+    api_key = os.getenv("SERPAPI_KEY", "")
     params = {"engine": "google", "q": query, "num": "5", "api_key": api_key}
     try:
         async with session.get("https://serpapi.com/search", params=params) as response:
@@ -791,7 +790,7 @@ async def _generate_seo_gap_report(session: aiohttp.ClientSession, my_text: str,
     return None
 
 
-async def _rewrite_for_syndication(session: aiohttp.ClientSession, markdown_body: str, persona: str = "") -> Optional[str]:
+async def _rewrite_for_syndication(_session: aiohttp.ClientSession, markdown_body: str, persona: str = "") -> Optional[str]:
     """
     The Syndicator. Now uses the battle-tested Atomic Tools with Persona.
     """
@@ -896,7 +895,7 @@ async def generate_ai_assets(session: aiohttp.ClientSession, post_data: PostData
 
     if not syndicated_body:
         logger.warning("⚠️ [AI-ORCHESTRATOR] syndicated_body is empty, triggering Ultimate HTML Fallback.")
-        syndicated_body = fallback_teaser(post_data.html_content, final_hook, post_data.title, post_data.canonical_url)
+        syndicated_body = fallback_teaser(post_data.html_content, final_hook)
 
     logger.info("✅ [AI-ORCHESTRATOR] Pipeline execution complete.")
     return final_hook, dynamic_tags, str(syndicated_body)
@@ -1005,7 +1004,7 @@ async def post_to_linkedin(session: aiohttp.ClientSession, post_data: PostData) 
         return PLATFORM, "success"
 
     logger.info("⏳ Forging the LinkedIn broadcast...")
-    tracked_url: str = build_utm_url(post_data.canonical_url, PLATFORM)
+
     final_text: str = (post_data.ai_hook or post_data.post_summary)
 
     url: str = "https://api.linkedin.com/v2/ugcPosts"
@@ -1053,7 +1052,6 @@ async def post_to_bluesky(_session: aiohttp.ClientSession, post_data: PostData) 
         return PLATFORM, "success"
 
     logger.info("⏳ Forging Bluesky broadcast...")
-    tracked_url: str = build_utm_url(post_data.canonical_url, PLATFORM)
     final_text: str = (post_data.ai_hook or post_data.post_summary)
 
     client: AsyncClient = AsyncClient()
@@ -1086,7 +1084,6 @@ async def post_to_mastodon(_session: aiohttp.ClientSession, post_data: PostData)
     if CONFIG.DRY_RUN: return PLATFORM, "success"
 
     logger.info("⏳ Broadcasting to the Fediverse (Mastodon)...")
-    tracked_url = build_utm_url(post_data.canonical_url, PLATFORM)
     final_text = (post_data.ai_hook or post_data.post_summary)
 
     try:
@@ -1125,7 +1122,7 @@ async def post_to_telegram(session: aiohttp.ClientSession, post_data: PostData) 
     if CONFIG.DRY_RUN: return PLATFORM, "success"
 
     logger.info("⏳ Broadcasting to Telegram...")
-    tracked_url: str = build_utm_url(post_data.canonical_url, PLATFORM)
+
     final_text: str = (post_data.ai_hook or post_data.post_summary or "")
 
     url: str = f"https://api.telegram.org/bot{CONFIG.TELEGRAM_TOKEN}/sendMessage"
@@ -1244,7 +1241,7 @@ async def post_to_discord(session: aiohttp.ClientSession, post_data: PostData) -
     if CONFIG.DRY_RUN: return PLATFORM, "success"
 
     logger.info("⏳ Notifying the Discord Council...")
-    tracked_url = build_utm_url(post_data.canonical_url, PLATFORM)
+
     final_text = (post_data.ai_hook or post_data.post_summary)
 
     payload = {
@@ -1720,7 +1717,7 @@ async def post_to_tumblr(_session: aiohttp.ClientSession, post_data: PostData) -
         return PLATFORM, "success"
 
     logger.info("⏳ Broadcasting to Tumblr...")
-    tracked_url = build_utm_url(post_data.canonical_url, PLATFORM)
+
     body_content = post_data.syndicated_body or post_data.markdown_body
     tags = post_data.dynamic_tags or getattr(CONFIG, "TAGS", [])
 
@@ -1868,7 +1865,7 @@ async def _phase1_ingest_and_sync_state(session: aiohttp.ClientSession, topic: s
 
 
 # --- PHASE 2: GATEKEEPER, PSI, AXE, & AI ---
-async def _prepare_ai_assets(session: aiohttp.ClientSession, state: Dict[str, Any], post_data: PostData, preview_delay: bool = True, persona: str = "", force_regenerate: bool = False) -> PostData:
+async def _prepare_ai_assets(session: aiohttp.ClientSession, state: Dict[str, Any], post_data: PostData, persona: str = "", force_regenerate: bool = False) -> PostData:
     if force_regenerate or not state.get("ai_hook") or not state.get("dynamic_tags") or not state.get("syndicated_body"):
         final_hook, dynamic_tags, syndicated_body = await generate_ai_assets(session, post_data, state, persona=persona)
         state["ai_hook"] = final_hook
@@ -1893,28 +1890,22 @@ async def _prepare_ai_assets(session: aiohttp.ClientSession, state: Dict[str, An
     logger.info(f"SYNDICATED BODY PREVIEW (First 500 chars):\n{syndicated_body[:500]}...")
     logger.info("-" * 60)
     
-    if not preview_delay:
-        # Save a report file for easy viewing in Content-Only mode
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        report_path = os.path.join(script_dir, "latest_content_report.md")
-        try:
+
+    # Save a report file for easy viewing in Content-Only mode
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    report_path = os.path.join(script_dir, "latest_content_report.md")
+    try:
             with open(report_path, "w", encoding="utf-8") as f:
                 f.write(f"# GemmaForge Content Report\n\n")
                 f.write(f"## Hook\n{final_hook}\n\n")
                 f.write(f"## Tags\n{formatted_tags}\n\n")
                 f.write(f"## Syndicated Content\n{syndicated_body}\n")
             logger.info(f"💾 Full report saved to: {report_path}")
-        except Exception as e:
+    except Exception as e:
             logger.error(f"Failed to save report: {e}")
 
-    if preview_delay:
-        logger.info("⏳ Waiting 10 seconds. Press Ctrl+C to abort if the assets are bad...")
-    else:
-        logger.info("Content-only mode: preview delay skipped.")
-    logger.info("=" * 60 + "\n")
 
-    if preview_delay:
-        await asyncio.sleep(10)
+    logger.info("=" * 60 + "\n")
 
     return post_data
 
@@ -1956,7 +1947,7 @@ async def _phase2_validate_and_prepare(
         logger.info("⚡ Quality gates skipped by engine mode.")
         state.pop("reason", None)
         await save_state(state)
-        return await _prepare_ai_assets(session, state, post_data, preview_delay=not content_only, persona=persona, force_regenerate=content_only)
+        return await _prepare_ai_assets(session, state, post_data, persona=persona, force_regenerate=content_only)
 
     use_cache: bool = not getattr(CONFIG, "RE_TEST_ON_RETRY", False)
 
@@ -2094,7 +2085,7 @@ async def _phase2_validate_and_prepare(
     logger.info("✅ All Quality Gates passed! Proceeding to broadcast.")
     state.pop("reason", None)
     await save_state(state)
-    return await _prepare_ai_assets(session, state, post_data, preview_delay=not content_only, persona=persona, force_regenerate=content_only)
+    return await _prepare_ai_assets(session, state, post_data, persona=persona, force_regenerate=content_only)
 
 
 # --- PHASE 3: EXECUTION & REPORTING ---
@@ -2224,7 +2215,7 @@ async def run_with_retries(
                 syndicate_content=syndicate_content,
                 content_only=content_only,
                 topic=topic,
-                persona=persona
+
             )
             return  # success → stop retrying
         except Exception as e:
@@ -2246,7 +2237,7 @@ async def run_content_only(topic: str = "", persona: str = "") -> None:
         persona=persona
     )
 
-async def edit_content(instruction: str, model: str) -> bool:
+async def edit_content(instruction: str) -> bool:
     """Edits the latest generated content using the provided instruction and model."""
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -2260,7 +2251,14 @@ async def edit_content(instruction: str, model: str) -> bool:
             current_content = f.read()
             
         # Use Atomic Tool logic for editing
-        brief = f"Apply the following edit to the content.\nInstruction: {instruction}\n\nOriginal Content:\n{current_content}"
+        brief = f"""TASK: Execute string mutation on {current_content} based on {instruction}.
+
+FORMAT ENFORCEMENT:
+Return the mutated text in its EXACT original markup format (Markdown/HTML).
+DO NOT add conversational text.
+DO NOT wrap in formatting blocks.
+Output ONLY the final mutated markup.
+"""
         
         logger.info(f"🧠 [AI-EDITOR] Sending standardized edit request via Atomic Tools...")
         

@@ -95,6 +95,79 @@ function clearSettings() {
 // ═══════════════════════════════════════════════
 // TOOLS PAGE logic
 // ═══════════════════════════════════════════════
+// helpers for files and images
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = error => reject(error);
+  });
+}
+
+function previewImage(input, previewId) {
+  const preview = document.getElementById(previewId);
+  const container = document.getElementById(previewId + '-container');
+  const btnId = previewId === 'alt-preview' ? 'btn-upload-alt' : 'btn-upload-img-article';
+  const btn = document.getElementById(btnId);
+  const logEl = document.getElementById(previewId + '-log');
+  
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      if (preview) preview.src = e.target.result;
+      if (container) container.style.display = 'block';
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.textContent = '📁 Uploaded';
+      }
+      if (logEl) {
+        logEl.style.display = 'block';
+        logEl.textContent = `🟢 Image Uploaded: ${input.files[0].name}`;
+      }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function clearImage(previewId) {
+  const preview = document.getElementById(previewId);
+  const container = document.getElementById(previewId + '-container');
+  const btnId = previewId === 'alt-preview' ? 'btn-upload-alt' : 'btn-upload-img-article';
+  const btn = document.getElementById(btnId);
+  const logEl = document.getElementById(previewId + '-log');
+  const inputId = previewId === 'alt-preview' ? 'input-alt-file' : 'input-img-article-file';
+  const input = document.getElementById(inputId);
+
+  if (input) input.value = '';
+  if (preview) preview.src = '';
+  if (container) container.style.display = 'none';
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.textContent = previewId === 'alt-preview' ? '📁 Upload Image' : '📁 Upload Sketch/Plan';
+  }
+  if (logEl) {
+    logEl.style.display = 'none';
+    logEl.textContent = '';
+  }
+}
+
+let selectedFormatImg = 'html';
+function setFormatImg(fmt) {
+  selectedFormatImg = fmt;
+  const display = document.getElementById('format-display-img');
+  if (display) display.textContent = fmt;
+  document.getElementById('fmt-html-img')?.classList.toggle('active', fmt === 'html');
+  document.getElementById('fmt-md-img')?.classList.toggle('active', fmt === 'markdown');
+}
+
 let selectedFormat = window.selectedFormat || 'html';
 let lastResult = null;
 let lastFormat = 'markdown';
@@ -106,6 +179,8 @@ const TOOL_META = {
   'seo-gap-report': { title: 'SEO Gap Report', model: 'Gemma 26B', icon: '🔬' },
   'plan-content': { title: 'Content Blueprint', model: 'Gemma 26B', icon: '🗺️' },
   'write-content': { title: 'Generated Content', model: 'Gemma 31B', icon: '✍️' },
+  'alt-text': { title: 'Image Alt Text', model: 'Gemma 26B', icon: '🖼️' },
+  'image-to-article': { title: 'Image to Article', model: 'Gemma 26B/31B', icon: '🎨' },
 };
 
 const CHAR_LIMITS = {
@@ -159,10 +234,16 @@ function toolInputSummary(tool) {
     'seo-gap-report': [['My text', 'input-seo-my'], ['Competitors', 'input-seo-comp']],
     'plan-content': [['Gap', 'input-plan-gap'], ['Trends', 'input-plan-trends'], ['Style', 'input-plan-style']],
     'write-content': [['Blueprint', 'input-write'], ['Format', 'format-display']],
+    'alt-text': [['Image', 'input-alt-file']],
+    'image-to-article': [['Image', 'input-img-article-file'], ['Prompt', 'input-img-article-prompt']],
   }[tool] || [];
 
   return sources
     .map(([label, id]) => {
+      if (id.endsWith('-file')) {
+        const el = document.getElementById(id);
+        return `${label}: ${el && el.files && el.files[0] ? el.files[0].name : 'None'}`;
+      }
       const value = id === 'format-display' ? (document.getElementById(id)?.textContent || selectedFormat) : getVal(id);
       if (!value) return '';
       const compact = value.replace(/\s+/g, ' ').slice(0, 180);
@@ -232,7 +313,15 @@ function initToolDraftPersistence() {
 
 async function callTool(tool) {
   let inputSummary = toolInputSummary(tool);
-  const btnId = { 'compress-fluff': 'btn-compress', 'analyse-trends': 'btn-trends', 'seo-gap-report': 'btn-seo', 'plan-content': 'btn-plan', 'write-content': 'btn-write' }[tool];
+  const btnId = { 
+    'compress-fluff': 'btn-compress', 
+    'analyse-trends': 'btn-trends', 
+    'seo-gap-report': 'btn-seo', 
+    'plan-content': 'btn-plan', 
+    'write-content': 'btn-write',
+    'alt-text': 'btn-alt',
+    'image-to-article': 'btn-img-article'
+  }[tool];
   let resultText = '';
   let format = 'markdown';
 
@@ -261,6 +350,27 @@ async function callTool(tool) {
       const v = getVal('input-write'); if (!v) throw new Error('Provide blueprint first.');
       resultText = await window.aiEngine.writeTheContent(v, selectedFormat);
       format = selectedFormat;
+    } else if (tool === 'alt-text') {
+      const fileInput = document.getElementById('input-alt-file');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        throw new Error('Please select an image first.');
+      }
+      const file = fileInput.files[0];
+      const base64 = await fileToBase64(file);
+      const mimeType = file.type || "image/jpeg";
+      resultText = await window.aiEngine.generateAltText(base64, mimeType);
+      format = 'markdown';
+    } else if (tool === 'image-to-article') {
+      const fileInput = document.getElementById('input-img-article-file');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        throw new Error('Please select an image first.');
+      }
+      const file = fileInput.files[0];
+      const base64 = await fileToBase64(file);
+      const mimeType = file.type || "image/jpeg";
+      const extraPrompt = getVal('input-img-article-prompt');
+      resultText = await window.aiEngine.imageToArticle(base64, mimeType, extraPrompt, selectedFormatImg);
+      format = selectedFormatImg;
     }
 
     setBtnLoading(btnId, false);

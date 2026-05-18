@@ -1,9 +1,10 @@
 """
 GemmaForge Central Server — serves 3 HTML pages + all API endpoints
 """
-import asyncio, logging, time, json, os, urllib.parse
+import asyncio, logging, time, json, urllib.parse
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks, Request
+from fastapi import FastAPI, BackgroundTasks, Request, UploadFile, File, Form
+import base64
 from typing import Dict
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
@@ -104,11 +105,13 @@ try:
     from content_gen import (
         compress_competitor_fluff_2b, analyse_trends_4b,
         generate_seo_gap_report_26b, plan_the_content_26b, write_the_content_31b,
+        generate_alt_text_26b, extract_image_content_26b,
     )
 except ImportError:
     from engine.content_gen import (
         compress_competitor_fluff_2b, analyse_trends_4b,
         generate_seo_gap_report_26b, plan_the_content_26b, write_the_content_31b,
+        generate_alt_text_26b, extract_image_content_26b,
     )
 
 @app.post("/tools/compress-fluff", tags=["Atomic Tools"])
@@ -166,6 +169,65 @@ async def api_write_content(request: Request, content_plan: str = "", output_for
     logger.info(f"✅ write_content done. {len(result)} chars.")
     return {"status": "success", "result": result, "format": output_format}
 
+@app.post("/tools/alt-text", tags=["Atomic Tools"])
+async def api_alt_text(image: UploadFile = File(...)):
+    """Gemma Vision — generate descriptive alt text for an image."""
+    try:
+        contents = await image.read()
+        image_base64 = base64.b64encode(contents).decode("utf-8")
+        mime_type = image.content_type or "image/jpeg"
+        logger.info(f"▶ generate_alt_text_26b starting ({mime_type}, {len(contents)} bytes)...")
+        result = await generate_alt_text_26b(image_base64, mime_type)
+        logger.info(f"✅ alt_text done. {len(result)} chars.")
+        return {"status": "success", "result": result, "format": "text"}
+    except Exception as e:
+        logger.error(f"Error in api_alt_text: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+@app.post("/tools/extract-image", tags=["Atomic Tools"])
+async def api_extract_image(image: UploadFile = File(...), prompt: str = Form("")):
+    """Gemma Vision — extract text, structural plan, or diagram data from an image."""
+    try:
+        contents = await image.read()
+        image_base64 = base64.b64encode(contents).decode("utf-8")
+        mime_type = image.content_type or "image/jpeg"
+        logger.info(f"▶ extract_image_content_26b starting ({mime_type}, {len(contents)} bytes, prompt={prompt})...")
+        result = await extract_image_content_26b(image_base64, mime_type, prompt)
+        logger.info(f"✅ extract_image done. {len(result)} chars.")
+        return {"status": "success", "result": result, "format": "markdown"}
+    except Exception as e:
+        logger.error(f"Error in api_extract_image: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+@app.post("/tools/image-to-article", tags=["Atomic Tools"])
+async def api_image_to_article(image: UploadFile = File(...), prompt: str = Form(""), output_format: str = Form("html"), human_style: str = Form("")):
+    """Gemma Vision Pipeline — extracts plan from image, plans it, and writes the article."""
+    try:
+        contents = await image.read()
+        image_base64 = base64.b64encode(contents).decode("utf-8")
+        mime_type = image.content_type or "image/jpeg"
+        
+        logger.info("▶ image-to-article step 1: extracting content...")
+        extracted_content = await extract_image_content_26b(image_base64, mime_type, prompt)
+        
+        logger.info("▶ image-to-article step 2: planning content...")
+        gap_report = "N/A - Image based generation"
+        plan = await plan_the_content_26b(gap_report, extracted_content, human_style)
+        
+        logger.info("▶ image-to-article step 3: writing content...")
+        article = await write_the_content_31b(plan, output_format)
+        
+        return {
+            "status": "success",
+            "extracted_content": extracted_content,
+            "plan": plan,
+            "result": article,
+            "format": output_format
+        }
+    except Exception as e:
+        logger.error(f"Error in api_image_to_article: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
 # ── Engine Endpoints ────────────────────────────────────────────
 @app.post("/engine/run", tags=["Full Engine"])
 async def run_full_engine(
@@ -173,7 +235,6 @@ async def run_full_engine(
     ping_search_engines: bool = True,
     syndicate_content: bool = True,
     topic: str = "",
-    persona: str = "",
     background_tasks: BackgroundTasks = None
 ):
     try:
@@ -193,7 +254,6 @@ async def run_full_engine(
             ping_search_engines=ping_search_engines,
             syndicate_content=syndicate_content,
             topic=topic,
-            persona=persona
         )
     background_tasks.add_task(_run)
     return {"status": "accepted", "mode": "full", "topic": topic}
@@ -235,12 +295,9 @@ async def get_latest_report():
 async def edit_content_endpoint(request: Request):
     data = await request.json()
     instruction = data.get("instruction")
-    model = data.get("model", "gemma-4-31b-it")
-    
-    try:
-        from distribution_engine import edit_content, log_listener
-    except ImportError:
-        from engine.distribution_engine import edit_content, log_listener
+
+    from distribution_engine import edit_content, log_listener
+
         
     try:
         log_listener.start()
@@ -248,7 +305,7 @@ async def edit_content_endpoint(request: Request):
         logger.debug(f"Log listener status: {e}")
         
     try:
-        success = await edit_content(instruction, model)
+        success = await edit_content(instruction)
         if success:
             return {"status": "success"}
         else:

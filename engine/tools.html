@@ -5,6 +5,7 @@
 <title>GemmaForge — Atomic Tools</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" type="image/svg+xml">
 <!-- Marked.js for markdown rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -29,9 +30,9 @@
 
 <main class="page-main tools-main">
   <div class="page-header">
-    <div class="badge">5 Atomic Functions · 4 Gemma Models</div>
+    <div class="badge">7 Atomic Functions · 4 Gemma Models</div>
     <h1>Atomic Intelligence Tools</h1>
-    <p class="page-desc">Five specialized Gemma functions — each solving one phase of the content pipeline.</p>
+    <p class="page-desc">Seven specialized Gemma functions — each solving one phase of the content pipeline including multimodal vision pipelines.</p>
     <button type="button" class="btn-secondary" onclick="fillTestInputs()" style="margin-top: 1rem; border-color: var(--accent);">🧪 Try with Test Inputs</button>
   </div>
 
@@ -121,6 +122,63 @@
       <button type="button" class="tool-btn" id="btn-write" onclick="callTool('write-content')">Run ▶</button>
     </div>
 
+    <!-- Tool 6 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-26b">Gemma 26B — Multimodal Vision</div>
+        <div class="tool-icon">🖼️</div>
+      </div>
+      <h3>Generate Image Alt Text</h3>
+      <p>Analyze an image and automatically generate accurate, descriptive SEO-optimized alt text. Upload the image directly below.</p>
+      <div class="tool-fn">generate_alt_text_26b(image)</div>
+      
+      <div class="file-upload-wrapper" style="margin-top: 1rem;">
+        <input type="file" id="input-alt-file" accept="image/*" onchange="previewImage(this, 'alt-preview')" style="position: absolute; width: 0; height: 0; opacity: 0; overflow: hidden;">
+        <button type="button" class="btn-secondary" id="btn-upload-alt" onclick="document.getElementById('input-alt-file').click()" style="width: 100%; border-color: var(--accent);">📁 Upload Image</button>
+        <div id="alt-preview-container" style="margin-top: 0.5rem; text-align: center; display: none;">
+          <img id="alt-preview" style="max-height: 150px; max-width: 100%; border-radius: 8px; border: 1px solid var(--accent); padding: 2px;">
+          <div id="alt-preview-log" style="color: var(--accent2); font-size: 0.72rem; margin-top: 0.35rem; font-family: var(--mono); text-align: center; display: none; font-weight: 500;"></div>
+          <span onclick="clearImage('alt-preview')" style="color: #ef4444; cursor: pointer; font-size: 0.72rem; display: block; margin-top: 0.35rem; font-weight: 500; font-family: var(--mono); text-decoration: underline;">✕ Clear Image</span>
+        </div>
+      </div>
+      
+      <button type="button" class="tool-btn" id="btn-alt" onclick="callTool('alt-text')" style="margin-top: 1.5rem;">Run ▶</button>
+    </div>
+
+    <!-- Tool 7 -->
+    <div class="tool-card">
+      <div class="tool-header">
+        <div class="tool-badge model-31b">Gemma 26B/31B — Vision Pipeline</div>
+        <div class="tool-icon">🎨</div>
+      </div>
+      <h3>Image to Article</h3>
+      <p>Analyze a layout, plan, or sketch image. Extracts structural elements, plans the narrative, and drafts the technical article end-to-end.</p>
+      <div class="tool-fn">image_to_article_pipeline(image, prompt, format)</div>
+      
+      <div class="file-upload-wrapper" style="margin-top: 1rem;">
+        <input type="file" id="input-img-article-file" accept="image/*" onchange="previewImage(this, 'img-article-preview')" style="position: absolute; width: 0; height: 0; opacity: 0; overflow: hidden;">
+        <button type="button" class="btn-secondary" id="btn-upload-img-article" onclick="document.getElementById('input-img-article-file').click()" style="width: 100%; border-color: var(--accent);">📁 Upload Sketch/Plan</button>
+        <div id="img-article-preview-container" style="margin-top: 0.5rem; text-align: center; display: none;">
+          <img id="img-article-preview" style="max-height: 150px; max-width: 100%; border-radius: 8px; border: 1px solid var(--accent); padding: 2px;">
+          <div id="img-article-preview-log" style="color: var(--accent2); font-size: 0.72rem; margin-top: 0.35rem; font-family: var(--mono); text-align: center; display: none; font-weight: 500;"></div>
+          <span onclick="clearImage('img-article-preview')" style="color: #ef4444; cursor: pointer; font-size: 0.72rem; display: block; margin-top: 0.35rem; font-weight: 500; font-family: var(--mono); text-decoration: underline;">✕ Clear Image</span>
+        </div>
+      </div>
+      
+      <textarea class="tool-input" placeholder="Optional extraction instructions (e.g. 'focus on Database layer')..." id="input-img-article-prompt" rows="2" maxlength="1000" style="margin-top: 0.5rem;"></textarea>
+      
+      <div class="format-row" style="margin-top: 0.5rem;">
+        <label class="format-label">Output format:</label>
+        <div class="format-toggle">
+          <button type="button" class="fmt-btn active" id="fmt-html-img" onclick="setFormatImg('html')">HTML</button>
+          <button type="button" class="fmt-btn" id="fmt-md-img" onclick="setFormatImg('markdown')">Markdown</button>
+        </div>
+        <span class="format-selected" id="format-display-img">html</span>
+      </div>
+      
+      <button type="button" class="tool-btn" id="btn-img-article" onclick="callTool('image-to-article')" style="margin-top: 1rem;">Run ▶</button>
+    </div>
+
   </div>
 </main>
 
@@ -191,7 +249,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="ai_engine.js"></script>
-<script src="app.js?v=5"></script>
+<script src="ai_engine.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
